@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111e1a">
+  <title>BANKRUPTCY — The game of losing money</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./js/ui.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><span class="trend-down">→</span></span>
+      <div><h1>BANKRUPTCY<span>.</span></h1><p>The game of losing money.</p></div>
+    </div>
+    <nav class="header-actions" aria-label="Game controls">
+      <button type="button" class="control" id="rules-button">Rules</button>
+      <button type="button" class="control" id="tuner-button">Balance tuner</button>
+      <button type="button" class="button button-gold" id="new-button">New game</button>
+    </nav>
+  </header>
+
+  <main class="game-layout">
+    <section class="game-table" aria-label="Game table">
+      <div class="felt">
+        <div class="table-top">
+          <div class="table-meta"><span class="live-dot"></span><span id="mode-label"></span><span class="table-divider"></span><span id="round-label"></span></div>
+          <div class="table-objective">Win at <strong>$0</strong> with <strong>0 stocks</strong></div>
+        </div>
+        <div class="opponents" id="opponents" aria-label="Other players"></div>
+
+        <div class="market-row">
+          <section class="deck-zone" aria-label="Main deck">
+            <div class="deck-card" aria-hidden="true"><span class="trend-down">→</span></div>
+            <div class="deck-caption"><strong>Main deck</strong><span id="deck-count"></span><span id="toilet-display" hidden></span></div>
+          </section>
+          <section class="market" aria-labelledby="market-heading">
+            <h2 id="market-heading">Stock price</h2>
+            <div class="market-quote">
+              <div class="dice" id="dice"></div>
+              <output id="market-price"></output>
+            </div>
+            <div class="stock-supply"><span></span><span id="stock-count"></span></div>
+          </section>
+          <section class="trade" aria-label="Trade stocks">
+            <h2>Trade stocks</h2>
+            <button type="button" id="buy-button" class="trade-button"><span>＋</span> Buy 1</button>
+            <button type="button" id="sell-button" class="trade-button"><span>−</span> Sell 1</button>
+            <button type="button" id="sell-all-button" class="trade-button"><span>⇊</span> Sell all</button>
+            <p id="trade-note"></p>
+          </section>
+        </div>
+      </div>
+
+      <section class="hand-area" aria-labelledby="hand-heading">
+        <div class="hand-status">
+          <div id="self-seat"></div>
+          <div class="turn-controls">
+            <button type="button" class="control undo" id="undo-button" aria-label="Undo" title="Undo last move">↶ <span>Undo</span></button>
+            <button type="button" class="control" id="skip-button">Skip card</button>
+            <button type="button" class="button button-gold" id="end-button">End turn <span aria-hidden="true">→</span></button>
+          </div>
+        </div>
+        <div class="hand-toolbar">
+          <div><h2 id="hand-heading">Your hand</h2><span id="hand-count" class="count-pill"></span></div>
+          <p id="turn-message" aria-live="polite"></p>
+        </div>
+        <div class="selection-tools" id="selection-tools" hidden>
+          <button type="button" class="control" id="cancel-selection">Cancel</button>
+          <button type="button" class="button button-gold" id="confirm-selection"></button>
+        </div>
+        <div class="hand-scroll"><div id="hand" class="hand"></div></div>
+      </section>
+    </section>
+
+    <aside class="sidebar" aria-label="Match activity">
+      <div class="sidebar-header">
+        <div class="activity-icon" aria-hidden="true">≋</div>
+        <div><h2>Action log</h2><p>Latest plays first</p></div>
+      </div>
+      <ol id="activity-log" class="activity-log" aria-label="Recent game events"></ol>
+      <label class="fast-control" id="fast-control"><span><b>Fast AI</b><small>Skip bot delays</small></span><input type="checkbox" id="fast-ai" role="switch"></label>
+    </aside>
+  </main>
+
+  <dialog id="new-dialog" aria-labelledby="new-title">
+    <form id="new-form" method="dialog">
+      <header class="dialog-header"><h2 id="new-title">New game</h2><button type="button" class="control close-dialog" aria-label="Close">×</button></header>
+      <div class="dialog-body">
+        <label class="field">Play mode<select id="play-mode"><option value="ai">Solo vs. AI</option><option value="pass">Pass &amp; Play</option></select></label>
+        <label class="field">Players<select id="player-count"><option value="4">4 players</option><option value="3">3 players</option></select></label>
+        <p class="subtle" id="setup-cash"></p>
+      </div>
+      <footer class="dialog-footer"><button type="submit" class="button button-gold">Deal cards →</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="rules-dialog" aria-labelledby="rules-title">
+    <header class="dialog-header"><h2 id="rules-title">How to go bankrupt</h2><button type="button" class="control close-dialog" aria-label="Close">×</button></header>
+    <div class="dialog-body rules-copy">
+      <p>Be the first player with <strong>$0 and no stocks</strong>. Cash stops at zero.</p>
+      <ol>
+        <li><strong>Roll and draw.</strong> Both happen automatically. The two dice set the stock price at <span id="rule-pip"></span> per pip. A draw pile with fewer cards than players gets topped up with the shuffled discards.</li>
+        <li><strong>Play up to one card.</strong> Lose cards target yourself, Gain cards can target anyone, and Action cards follow their own text.</li>
+        <li><strong>Trade.</strong> Buy only if your cash is strictly more than twice the price before each purchase. You can hold up to five stocks. Sell any number at the current price.</li>
+        <li><strong>End your turn.</strong> Collect <span id="rule-dividend"></span> per stock in dividends, then shuffle any cards over seven back into the main deck.</li>
+      </ol>
+      <p><strong>Golden Toilet.</strong> The first player to reach <span id="rule-threshold"></span> or more resets to <span id="rule-reset"></span> and keeps their stocks. It only flushes once per game.</p>
+    </div>
+  </dialog>
+
+  <dialog id="pass-dialog" aria-labelledby="pass-title">
+    <div class="dialog-body handoff">
+      <div class="brand-mark" aria-hidden="true"><span class="trend-down">→</span></div><h2 id="pass-title"></h2>
+      <p>Pass the device before revealing the next hand.</p>
+      <button type="button" class="button button-gold" id="reveal-button">Reveal hand →</button>
+    </div>
+  </dialog>
+
+  <dialog id="win-dialog" aria-labelledby="win-title">
+    <header class="dialog-header"><h2 id="win-title"></h2><button type="button" class="control close-dialog" aria-label="Close">×</button></header>
+    <div class="dialog-body win-body"><strong>$0</strong><p id="win-detail"></p></div>
+    <footer class="dialog-footer"><button type="button" class="button button-gold" id="rematch-button">New game →</button></footer>
+  </dialog>
+
+  <dialog class="drawer" id="tuner-dialog" aria-labelledby="tuner-title">
+    <header class="dialog-header"><h2 id="tuner-title">Balance tuner</h2><button type="button" class="control close-dialog" aria-label="Close">×</button></header>
+    <form id="tuner-form" class="dialog-body">
+      <p class="subtle">Run 500 games with every seat played by a bot. Apply these values to your next match to test them yourself.</p>
+      <div class="tuner-fields">
+        <label class="field">Starting cash ($M)<input type="number" data-rule="startingCash" min="1" max="10000" required></label>
+        <label class="field">Dividend per stock ($M)<input type="number" data-rule="dividend" min="0" max="1000" required></label>
+        <label class="field">Golden Toilet threshold ($M)<input type="number" data-rule="toiletThreshold" min="1" max="10000" required></label>
+        <label class="field">Golden Toilet reset ($M)<input type="number" data-rule="toiletReset" min="0" max="9999" required></label>
+        <label class="field">Opening hand<input type="number" data-rule="openingHand" min="1" max="7" required></label>
+        <label class="field">Simulated players<select id="sim-players"><option value="4">4 players</option><option value="3">3 players</option></select></label>
+      </div>
+      <div class="tuner-buttons">
+        <button type="submit" id="simulate-button" class="button button-gold">Run 500 games</button>
+        <button type="button" id="apply-button" class="control">Apply to next game</button>
+        <button type="button" id="reset-tuner" class="control">Reset values</button>
+      </div>
+      <p id="sim-status" role="status"></p>
+      <progress id="sim-progress" max="500" value="0" aria-label="Simulation progress" hidden></progress>
+      <dl class="metrics" id="sim-results" hidden>
+        <div><dt>Average rounds to win</dt><dd id="avg-rounds"></dd></div>
+        <div><dt>Median rounds to win</dt><dd id="median-rounds"></dd></div>
+        <div><dt>Golden Toilet rate</dt><dd id="toilet-rate"></dd></div>
+        <div><dt>Games with a winner</dt><dd id="sim-wins"></dd></div>
+      </dl>
+    </form>
+  </dialog>
+</body>
+</html>
